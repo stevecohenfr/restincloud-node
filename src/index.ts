@@ -1,0 +1,1 @@
+export {RestInCloudAPI} from './api'

@@ -1,0 +1,27 @@
+{
+  "name": "restincloud-node",
+  "version": "1.0.0",
+  "description": "Restincloud API for node",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "start": "npm run watch",
+    "prepublish": "npm run build",
+    "prebuild": "del dist/",
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-fetch": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^16.6.1",
+    "@types/node-fetch": "^2.5.12",
+    "cpy-cli": "^2.0.0",
+    "del-cli": "^3.0.0",
+    "typescript": "^4.3.2"
+  }
+}
