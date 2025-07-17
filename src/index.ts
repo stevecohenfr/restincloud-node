@@ -1,1 +1,1 @@
-export {RestInCloudAPI} from './api'
+export {GameDataService} from './api'

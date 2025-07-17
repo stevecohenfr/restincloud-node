@@ -1,90 +1,55 @@
-import fetch from 'node-fetch';
+export class GameDataService {
 
-const RESTINCLOUD_API = "https://restincloud.stevecohen.fr/api";
+    private static API_URL = 'https://us-central1-baguettegameengine.cloudfunctions.net';
+    private token: string;
+    private apiUrl: string;
 
-class HTTPResponseError extends Error {
-    constructor(response) {
-        super(`HTTP Error Response: ${response.status} ${response.statusText}`);
-    }
-}
-
-interface Variable {
-    "id": number,
-    "key": string,
-    "value": string,
-    "owner_id": number,
-    "created_at": string,
-    "updated_at": string
-}
-
-export class RestInCloudAPI {
-    private token;
-
-    constructor(token) {
+    constructor(token: string) {
         this.token = token;
+        this.apiUrl = GameDataService.API_URL;
     }
 
-    async getVar(key): Promise<{
-        code: string,
-        result: Variable
-    }> {
-        let params = new URLSearchParams();
-        params.append('token', this.token);
-        params.append('key', key);
+    private async request(endpoint: string, method: string = "POST", body?: any): Promise<{ status: "success" | "fail", response: any }> {
+        try {
+            console.log(`Requesting [${method}] ${this.apiUrl}${endpoint} ${JSON.stringify(body)}`);
+            const res = await fetch(`${this.apiUrl}${endpoint}`, {
+                method,
+                headers: {
+                    Authorization: `Bearer ${this.token}`,
+                    "Content-Type": "application/json"
+                },
+                body: body ? JSON.stringify(body) : undefined
+            });
 
-        const response = await fetch(RESTINCLOUD_API + "/var?" + params.toString());
-        return response.json().then((value) => {
-            return value;
-        }).catch(() => {
-            throw new HTTPResponseError(response);
-        });
+            const json = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                return { status: "fail", response: json.message || json.error || res.statusText };
+            }
+
+            return { status: "success", response: json };
+        } catch (err) {
+            return { status: "fail", response: (err as Error).message };
+        }
     }
 
-    async putVar(key, value): Promise<{
-        code: string,
-        result: Variable
-    }> {
-        let params = new URLSearchParams();
-        params.append('token', this.token);
-        params.append('key', key);
-        params.append('value', value);
-
-        const response = await fetch(RESTINCLOUD_API + "/var?" + params.toString(), {method: 'PUT'});
-        return response.json().then((value) => {
-            return value;
-        }).catch(() => {
-            throw new HTTPResponseError(response);
-        });
+    async verify(): Promise<{ status: "success" | "fail", response: any }> {
+        return this.request("/verifyToken", "GET");
     }
 
-    async deleteVar(key): Promise<{
-        code: string,
-        result: Variable
-    }> {
-        let params = new URLSearchParams();
-        params.append('token', this.token);
-        params.append('key', key);
-
-        const response = await fetch(RESTINCLOUD_API + "/var?" + params.toString(), {method: 'DELETE'});
-        return response.json().then((value) => {
-            return value;
-        }).catch(() => {
-            throw new HTTPResponseError(response);
-        });
+    async get(key: string): Promise<{ status: "success" | "fail", response: any }> {
+        return this.request("/get", "POST", { key });
     }
 
-    async getAllVars(): Promise<{
-        code: string,
-        result: Variable[]
-    }> {
-        let params = new URLSearchParams();
-        params.append('token', this.token);
+    async set(key: string, value: any): Promise<{ status: "success" | "fail", response: any }> {
+        return this.request("/set", "POST", { key, value });
+    }
 
-        const response = await fetch(RESTINCLOUD_API + "/var/all?" + params.toString());
-        return response.json().then((value) => {
-            return value;
-        }).catch(() => {
-            throw new HTTPResponseError(response);
-        });
+    async update(key: string, value: any): Promise<{ status: "success" | "fail", response: any }> {
+        return this.request("/update", "POST", { key, value });
+    }
+
+    async delete(key: string): Promise<{ status: "success" | "fail", response: any }> {
+        return this.request("/remove", "POST", { key });
     }
 }
