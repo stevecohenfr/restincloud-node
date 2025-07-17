@@ -6,7 +6,11 @@ admin.initializeApp({
 import * as jwt from "jsonwebtoken";
 import { getValue, setValue, updateValue, deleteValue } from "./CRUD";
 import * as dotenv from "dotenv";
+dotenv.config();
 import { v4 as uuidv4 } from "uuid";
+import * as crypto from "crypto";
+const secretKey = Buffer.from(process.env.SECRET_KEY!, "utf-8"); // 32 bytes
+const IV_LENGTH = 16; // pour AES-CBC
 
 import * as corsModule from "cors";
 
@@ -20,7 +24,17 @@ function withCors(handler: (req: functions.Request, res: functions.Response) => 
     });
 }
 
-dotenv.config();
+function decryptData(ciphertextBase64: string): string {
+    const data = Buffer.from(ciphertextBase64, "base64");
+
+    const iv = data.slice(0, IV_LENGTH);
+    const encryptedText = data.slice(IV_LENGTH);
+
+    const decipher = crypto.createDecipheriv("aes-256-cbc", secretKey, iv);
+    let decrypted = decipher.update(encryptedText, undefined, "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+}
 
 const db = admin.firestore();
 
@@ -116,15 +130,16 @@ export const verifyToken = withCors(async (req, res) => {
 export const get = withCors(async (req, res) => {
     try {
         const data = await verifyTokenAndGetData(req);
-        const { key } = req.body;
+        const cryptedData = req.body;
 
-        // sécurité basique : tu pourrais aussi logguer IP + user agent
-        if (!key) {
+        if (!cryptedData) {
             res.status(400).send("Missing key");
             return;
         }
 
-        const value = await getValue(data.gameUid, key);
+        const decryptedData = decryptData(cryptedData);
+        const obj = JSON.parse(decryptedData);
+        const value = await getValue(data.gameUid, obj.key);
         res.send({ value });
     } catch (err) {
         console.error("Error in get", err);
@@ -135,8 +150,17 @@ export const get = withCors(async (req, res) => {
 export const set = withCors(async (req, res) => {
     try {
         const data = await verifyTokenAndGetData(req);
-        const { key, value } = req.body;
-        await setValue(data.gameUid, key, value);
+        const cryptedData = req.body;
+
+        if (!cryptedData) {
+            res.status(400).send("Missing data");
+            return;
+        }
+
+        const decryptedData = decryptData(cryptedData);
+        const obj = JSON.parse(decryptedData);
+
+        await setValue(data.gameUid, obj.key, obj.value);
         res.send({ success: true });
     } catch (err) {
         console.error("Error in set", err);
@@ -147,8 +171,17 @@ export const set = withCors(async (req, res) => {
 export const update = withCors(async (req, res) => {
     try {
         const data = await verifyTokenAndGetData(req);
-        const { key, value } = req.body;
-        await updateValue(data.gameUid, key, value);
+        const cryptedData = req.body;
+
+        if (!cryptedData) {
+            res.status(400).send("Missing data");
+            return;
+        }
+
+        const decryptedData = decryptData(cryptedData);
+        const obj = JSON.parse(decryptedData);
+
+        await updateValue(data.gameUid, obj.key, obj.value);
         res.send({ success: true });
     } catch (err) {
         console.error("Error in update", err);
@@ -159,8 +192,17 @@ export const update = withCors(async (req, res) => {
 export const remove = withCors(async (req, res) => {
     try {
         const data = await verifyTokenAndGetData(req);
-        const { key } = req.body;
-        await deleteValue(data.gameUid, key);
+        const cryptedData = req.body;
+
+        if (!cryptedData) {
+            res.status(400).send("Missing key");
+            return;
+        }
+
+        const decryptedData = decryptData(cryptedData);
+        const obj = JSON.parse(decryptedData);
+
+        await deleteValue(data.gameUid, obj.key);
         res.send({ success: true });
     } catch (err) {
         console.error("Error in delete", err);
