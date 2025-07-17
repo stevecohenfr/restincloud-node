@@ -1,12 +1,14 @@
 {
   "name": "restincloud-node",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Restincloud API for node",
   "main": "dist-obf/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist-obf",
-    "dist/index.d.ts"
+    "dist/index.d.ts",
+    "dist/api.d.ts",
+    "dist/crypto.d.ts",
+    "dist-obf/"
   ],
   "scripts": {
     "start": "npm run watch",
@@ -15,6 +17,7 @@
     "build": "tsc",
     "obfuscate": "npx javascript-obfuscator dist/ --output dist-obf/ --config obfuscator.config.json",
     "prepare": "npm run build && npm run obfuscate",
+    "deploy": "npm run prepare && npm publish",
     "watch": "tsc -w",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
